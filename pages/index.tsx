@@ -288,7 +288,6 @@ export default function Home() {
                   <p className="text-red-500">{error}</p>
                 </div>
               )}
-            }
             </div>
           } 
           </main>

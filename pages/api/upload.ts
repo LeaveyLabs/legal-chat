@@ -58,16 +58,17 @@ import { PuppeteerWebBaseLoader } from "langchain/document_loaders/web/puppeteer
 
 const handler = nextConnect();
 
-handler.post(async (req, res) => {
+handler.post(async (req:NextApiRequest, res:NextApiResponse) => {
   const form = new formidable.IncomingForm();
 
-  form.parse(req, async (err, fields, files) => {
+  form.parse(req, async (err, fields, files:any) => {
     if (err) {
       console.error('Error processing the file', err);
       res.status(500).json({ message: 'Error processing the file' });
       return;
     }
     const pdfFile = files.doc;
+    const text = fields.text;
     const webpage = fields.html;
 
     if (pdfFile) {
@@ -108,10 +109,35 @@ handler.post(async (req, res) => {
         console.log('error', error);
         res.status(400).json({ message: "pdf failed" });
       }
+    } else if (text) {
+      try {
+        const textSplitter = new RecursiveCharacterTextSplitter({
+            chunkSize: 1000,
+            chunkOverlap: 200,
+        });
+        const docs = await textSplitter.createDocuments([text.toString()])
+        console.log('split docs', docs);
+    
+        console.log('creating vector store...');
+        /*create and store the embeddings in the vectorStore*/
+        const embeddings = new OpenAIEmbeddings();
+        console.log(embeddings)
+        const index = pinecone.Index(PINECONE_INDEX_NAME); //change to your own index name
+        //embed the PDF documents
+        await PineconeStore.fromDocuments(docs, embeddings, {
+        pineconeIndex: index,
+        namespace: PINECONE_NAME_SPACE,
+        textKey: 'text',
+        });
+        res.status(200).json({ message: "pdf success" });
+      } catch (error) {
+          console.log('error', error);
+          res.status(400).json({ message: "pdf failed" });
+      }
     } else if (webpage) {
         try {
             console.log(webpage)
-            const loader = new PuppeteerWebBaseLoader(webpage);
+            const loader = new PuppeteerWebBaseLoader(webpage.toString());
             const rawDoc = await loader.load();
             /* Split text into chunks */
             const textSplitter = new RecursiveCharacterTextSplitter({
