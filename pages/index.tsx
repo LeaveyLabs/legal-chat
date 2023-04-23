@@ -138,7 +138,8 @@ export default function Home() {
         },
         body: formData
       });
-    console.log(response);
+    setDocsReceived(true)
+    console.log(response)
   }
 
   return (
